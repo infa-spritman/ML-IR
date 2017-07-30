@@ -53,7 +53,6 @@ def read_all_docs(indexName, type):
         for hit in page['hits']['hits']:
             doc_set.add(str(hit['_source']['docno']))
 
-
         print "Scrolling..."
         page = es.scroll(scroll_id=sid, scroll='2m')
         # Update the scroll ID
@@ -62,13 +61,11 @@ def read_all_docs(indexName, type):
         scroll_size = len(page['hits']['hits'])
         # print "scroll size: " + str(scroll_size)
 
-
-
     return doc_set
 
 
-def getScoreTuple(docid):
-    return (1,2,3,4,5)
+def getScoreTuple(docid, query_text):
+    return (1, 2, 3, 4, 5)
 
 
 def write_matrix(query, temp_query_map, test_queries_set):
@@ -76,8 +73,8 @@ def write_matrix(query, temp_query_map, test_queries_set):
         with open('test_matrix.txt', 'a+') as f:
             for docId, score_tuple in temp_query_map.iteritems():
                 temp_str = []
-                temp_str.append(str(query) + '-' + str(docid))
-                for index,eval_system_score in enumerate(score_tuple):
+                temp_str.append(str(query) + '-' + str(docId))
+                for index, eval_system_score in enumerate(score_tuple):
                     temp_str.append(str(eval_system_score))
 
                 string_write = ' '.join(temp_str) + '\n'
@@ -87,8 +84,8 @@ def write_matrix(query, temp_query_map, test_queries_set):
         with open('train_matrix.txt', 'a+') as f:
             for docId, score_tuple in temp_query_map.iteritems():
                 temp_str = []
-                temp_str.append(str(query) + '-' + str(docid))
-                for index,eval_system_score in enumerate(score_tuple):
+                temp_str.append(str(query) + '-' + str(docId))
+                for index, eval_system_score in enumerate(score_tuple):
                     temp_str.append(str(eval_system_score))
 
                 string_write = ' '.join(temp_str) + '\n'
@@ -96,31 +93,31 @@ def write_matrix(query, temp_query_map, test_queries_set):
                 f.write(string_write)
 
 
-
+def read_queries():
+    pass
 
 
 if __name__ == '__main__':
     test_queries_set = set([56, 57, 64, 71, 99])
-    # queries_map = read_queries()
+    queries_map = read_queries()
     all_docs = read_all_docs('ap_dataset', 'hw1')
     qrel, num_rel = read_qrel('qrels.adhoc.51-100.AP89.txt')
     for query, docMap in qrel.iteritems():
         count = 0
         temp_query_map = defaultdict(lambda: ())
+        query_text = queries_map[int(query)]
         for docid, relvance in docMap.iteritems():
-            all_score_tuple = getScoreTuple(docid)
-            temp_query_map[docid] = all_score_tuple
+            all_score_tuple = getScoreTuple(docid, query_text)
+            temp_query_map[docid] = all_score_tuple + (relvance,)
             count += 1
 
-        if count <1000:
+        if count < 1000:
             for docid in all_docs:
-                if count==1000:
-                    write_matrix(query,temp_query_map,test_queries_set)
+                if count == 1000:
+                    write_matrix(query, temp_query_map, test_queries_set)
                     break
 
                 if docid not in temp_query_map:
-                    all_score_tuple = getScoreTuple(docid)
-                    temp_query_map[docid] = all_score_tuple
+                    all_score_tuple = getScoreTuple(docid, query_text)
+                    temp_query_map[docid] = all_score_tuple + (0,)
                     count += 1
-
-
