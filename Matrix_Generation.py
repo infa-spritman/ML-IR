@@ -65,7 +65,7 @@ def read_all_docs(indexName, type):
 
 
 def getScoreTuple(docid, query_text):
-    return (1, 2, 3, 4, 5)
+    return (1.0,1.0,10.0,11.0,12.0)
 
 
 def write_matrix(query, temp_query_map, test_queries_set):
@@ -93,31 +93,60 @@ def write_matrix(query, temp_query_map, test_queries_set):
                 f.write(string_write)
 
 
-def read_queries():
-    pass
+def analysed_query(indexName, line):
+    token_list = []
+    json = es.indices.analyze(index=indexName, body={
+
+        "analyzer": "my_english",
+        "text": line
+
+    })
+
+    for tok in json['tokens']:
+         token_list.append(tok['token'])
+
+
+    return token_list
+
+
+def read_queries(file_queries):
+    temp_map = dict()
+
+    f = open(file_queries, 'r')
+    l = f.readlines()
+    for line in l:
+        try:
+            line_array = line.split()
+            formatted_query_terms = analysed_query('ap_dataset', line)
+            temp_map[int(line_array[0].replace('.', ''))] = formatted_query_terms
+        except Exception, e:
+            print e
+    f.close()
+    return temp_map
 
 
 if __name__ == '__main__':
     test_queries_set = set([56, 57, 64, 71, 99])
-    queries_map = read_queries()
+    queries_map = read_queries('query_desc.51-100.short.txt')
     all_docs = read_all_docs('ap_dataset', 'hw1')
     qrel, num_rel = read_qrel('qrels.adhoc.51-100.AP89.txt')
     for query, docMap in qrel.iteritems():
-        count = 0
-        temp_query_map = defaultdict(lambda: ())
-        query_text = queries_map[int(query)]
-        for docid, relvance in docMap.iteritems():
-            all_score_tuple = getScoreTuple(docid, query_text)
-            temp_query_map[docid] = all_score_tuple + (relvance,)
-            count += 1
+        if query in queries_map:
+            count = 0
+            temp_query_map = defaultdict(lambda: ())
+            query_text = queries_map[int(query)]
+            for docid, relvance in docMap.iteritems():
+                all_score_tuple = getScoreTuple(docid, query_text)
+                temp_query_map[docid] = all_score_tuple + (relvance,)
+                count += 1
 
-        if count < 1000:
-            for docid in all_docs:
-                if count == 1000:
-                    write_matrix(query, temp_query_map, test_queries_set)
-                    break
+            if count < 1000:
+                for docid in all_docs:
+                    if count == 1000:
+                        write_matrix(query, temp_query_map, test_queries_set)
+                        break
 
-                if docid not in temp_query_map:
-                    all_score_tuple = getScoreTuple(docid, query_text)
-                    temp_query_map[docid] = all_score_tuple + (0,)
-                    count += 1
+                    if docid not in temp_query_map:
+                        all_score_tuple = getScoreTuple(docid, query_text)
+                        temp_query_map[docid] = all_score_tuple + (0,)
+                        count += 1
